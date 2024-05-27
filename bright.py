@@ -2,7 +2,6 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 from openpyxl import load_workbook
-from openpyxl.utils import get_column_letter
 from openpyxl.styles import Font, Border, Side, PatternFill
 
 # 科学記数法の表示を無効にする
@@ -108,13 +107,62 @@ def process_excel(file_sta, file_now):
             for cell in row:
                 if isinstance(cell.value, (int, float)):
                     cell.number_format = '#,##0'
+        
+        # '全体'シートの場合、色付けを追加
+        if sheet.title == '全体':
+            lower_limit = 300000
+
+            # '前年平均'列と'決算書表示名'から'期間累計'の間の数値を比較
+            average_col = None
+            for col in sheet.iter_cols(min_row=2, max_row=2):
+                for cell in col:
+                    if cell.value == '前年平均':
+                        average_col = cell.column
+                        break
+                if average_col is not None:
+                    break
+
+            if average_col is not None:
+                # '決算書表示名'と'期間累計'の位置を取得
+                start_col = None
+                end_col = None
+                for col in sheet.iter_cols(min_row=2, max_row=2):
+                    for cell in col:
+                        if cell.value == '決算書表示名':
+                            start_col = cell.column
+                        elif cell.value == '期間累計':
+                            end_col = cell.column
+                        if start_col and end_col:
+                            break
+                    if start_col and end_col:
+                        break
+
+                if start_col and end_col:
+                    skip_rest = False  # フラグを初期化
+                    for row in sheet.iter_rows(min_row=3, max_row=sheet.max_row):
+                        account_name = row[0].value  # '勘定科目'列の値を取得
+                        if account_name == '営業損益':
+                            skip_rest = True  # '営業損益'が見つかったらフラグを設定
+                        if skip_rest:
+                            break  # フラグが設定されたらループを抜ける
+
+                        average_value = row[average_col - 1].value
+                        if average_value is not None:
+                            lower_bound = average_value * 0.75
+                            upper_bound = average_value * 1.25
+                            for cell in row[start_col-1:end_col-1]:
+                                if isinstance(cell.value, (int, float)):
+                                    difference = abs(cell.value - average_value)
+                                    # ±25%範囲外かつ差額が下限値以上の場合、セルに色を付ける
+                                    if (cell.value < lower_bound or cell.value > upper_bound) and difference >= lower_limit:
+                                        cell.fill = color_fill
 
     # 編集したExcelファイルを保存
     workbook.save('月次推移_損益計算書_前期比較(±30万円).xlsx')
 
     return '月次推移_損益計算書_前期比較(±30万円).xlsx'
 
-
+# Streamlit UI
 st.title('月次推移損益計算書の処理')
 
 uploaded_file_sta = st.file_uploader("前年の月次推移損益計算書をアップロードしてください", type="xlsx")
