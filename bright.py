@@ -162,7 +162,7 @@ def process_excel(file_sta, file_now, lower_limit, percentage_diff):
     return output_file_path
 
 # Streamlit UI
-st.title('月次推移損益計算書の処理')
+st.title('freee月次推移表_前年比較')
 
 uploaded_file_sta = st.file_uploader("前年の月次推移損益計算書をアップロードしてください", type="xlsx")
 uploaded_file_now = st.file_uploader("現在の月次推移損益計算書をアップロードしてください", type="xlsx")
