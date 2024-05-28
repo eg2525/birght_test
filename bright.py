@@ -7,7 +7,7 @@ from openpyxl.styles import Font, Border, Side, PatternFill
 # 科学記数法の表示を無効にする
 pd.set_option('display.float_format', '{:.2f}'.format)
 
-def process_excel(file_sta, file_now):
+def process_excel(file_sta, file_now, lower_limit, percentage_diff):
     ex_sta = pd.ExcelFile(file_sta)
     df_sta = pd.read_excel(ex_sta, header=1, sheet_name=None)
 
@@ -110,8 +110,6 @@ def process_excel(file_sta, file_now):
         
         # '全体'シートの場合、色付けを追加
         if sheet.title == '全体':
-            lower_limit = 300000
-
             # '前年平均'列と'決算書表示名'から'期間累計'の間の数値を比較
             average_col = None
             for col in sheet.iter_cols(min_row=2, max_row=2):
@@ -148,12 +146,12 @@ def process_excel(file_sta, file_now):
 
                         average_value = row[average_col - 1].value
                         if average_value is not None:
-                            lower_bound = average_value * 0.75
-                            upper_bound = average_value * 1.25
+                            lower_bound = average_value * (1 - percentage_diff / 100)
+                            upper_bound = average_value * (1 + percentage_diff / 100)
                             for cell in row[start_col-1:end_col-1]:
                                 if isinstance(cell.value, (int, float)):
                                     difference = abs(cell.value - average_value)
-                                    # ±25%範囲外かつ差額が下限値以上の場合、セルに色を付ける
+                                    # ±%範囲外かつ差額が下限値以上の場合、セルに色を付ける
                                     if (cell.value < lower_bound or cell.value > upper_bound) and difference >= lower_limit:
                                         cell.fill = color_fill
 
@@ -168,9 +166,12 @@ st.title('月次推移損益計算書の処理')
 uploaded_file_sta = st.file_uploader("前年の月次推移損益計算書をアップロードしてください", type="xlsx")
 uploaded_file_now = st.file_uploader("現在の月次推移損益計算書をアップロードしてください", type="xlsx")
 
+lower_limit = st.selectbox('下限値を選択してください（円）', [x * 50000 for x in range(1, 21)])
+percentage_diff = st.selectbox('差異の%を選択してください', [x * 5 for x in range(1, 21)])
+
 if uploaded_file_sta and uploaded_file_now:
     with st.spinner('処理中...'):
-        output_file = process_excel(uploaded_file_sta, uploaded_file_now)
+        output_file = process_excel(uploaded_file_sta, uploaded_file_now, lower_limit, percentage_diff)
     st.success('処理が完了しました。')
     st.download_button(
         label="処理済みファイルをダウンロード",
