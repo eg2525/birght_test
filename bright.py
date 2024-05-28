@@ -156,9 +156,10 @@ def process_excel(file_sta, file_now, lower_limit, percentage_diff):
                                         cell.fill = color_fill
 
     # 編集したExcelファイルを保存
-    workbook.save('月次推移_損益計算書_前期比較(±30万円).xlsx')
+    output_file_path = f'月次推移_損益計算書_前期比較(±{lower_limit // 10000}万円).xlsx'
+    workbook.save(output_file_path)
 
-    return '月次推移_損益計算書_前期比較(±30万円).xlsx'
+    return output_file_path
 
 # Streamlit UI
 st.title('月次推移損益計算書の処理')
@@ -166,8 +167,8 @@ st.title('月次推移損益計算書の処理')
 uploaded_file_sta = st.file_uploader("前年の月次推移損益計算書をアップロードしてください", type="xlsx")
 uploaded_file_now = st.file_uploader("現在の月次推移損益計算書をアップロードしてください", type="xlsx")
 
-lower_limit = st.selectbox('下限値を選択してください（円）', [x * 50000 for x in range(1, 21)])
-percentage_diff = st.selectbox('差異の%を選択してください', [x * 5 for x in range(1, 21)])
+lower_limit = st.selectbox('下限値を選択してください（円）', [x * 50000 for x in range(1, 21)], index=5)
+percentage_diff = st.selectbox('差異の%を選択してください', [x * 5 for x in range(1, 21)], index=4)
 
 if uploaded_file_sta and uploaded_file_now:
     with st.spinner('処理中...'):
